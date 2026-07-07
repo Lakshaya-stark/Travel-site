@@ -4,6 +4,7 @@ const userRouter = require("./routes/userRoutes");
 
 const app = express();
 
+app.set("query parser", "extended");
 app.use(express.json());
 app.use(express.static(`${__dirname}/public`));
 
