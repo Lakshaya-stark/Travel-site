@@ -22,9 +22,14 @@ exports.aliasTopTours = (req, res, next) => {
   next();
 };
 
-exports.getAllTours = async (req, res) => {
-  try {
-    const queryObj = { ...req.query };
+class APIFeatures {
+  constructor(query, queryString) {
+    this.query = query;
+    this.queryString = queryString;
+  }
+
+  filter() {
+    const queryObj = { ...this.queryString };
     const excludeQuery = ["page", "sort", "limit", "fields"];
     excludeQuery.forEach((el) => {
       delete queryObj[el];
@@ -33,35 +38,88 @@ exports.getAllTours = async (req, res) => {
     let queryStr = JSON.stringify(queryObj);
     queryStr = queryStr.replace(/\b(gt|gte|lt|lte)\b/g, (match) => `$${match}`);
 
-    let query = Tour.find(JSON.parse(queryStr));
+    this.query = this.query.find(JSON.parse(queryStr));
 
-    if (req.query.sort) {
-      let sortQuery = req.query.sort.split(",").join(" ");
+    return this;
+  }
 
-      query = query.sort(sortQuery);
+  sort() {
+    if (this.queryString.sort) {
+      let sortQuery = this.queryString.sort.split(",").join(" ");
+
+      this.query = this.query.sort(sortQuery);
     } else {
-      query = query.sort("-createdAt");
+      this.query = this.query.sort("-createdAt");
     }
+    return this;
+  }
 
-    if (req.query.fields) {
-      const fields = req.query.fields.split(",").join(" ");
-      query = query.select(fields);
+  limitFields() {
+    if (this.queryString.fields) {
+      const fields = this.queryString.fields.split(",").join(" ");
+      this.query = this.query.select(fields);
     } else {
-      query = query.select("-__v");
+      this.query = this.query.select("-__v");
     }
+    return this;
+  }
 
-    const page = req.query.page * 1 || 1;
-    const lim = req.query.limit * 1 || 100;
+  paginate() {
+    const page = this.queryString.page * 1 || 1;
+    const lim = this.queryString.limit * 1 || 100;
     const skip = lim * (page - 1);
 
-    query = query.skip(skip).limit(lim);
+    this.query = this.query.skip(skip).limit(lim);
 
-    if (req.query.page) {
-      const numTours = await Tour.countDocuments();
-      if (skip >= numTours) throw new Error("Page Doesnot Exists");
-    }
+    return this;
+  }
+}
 
-    const tours = await query;
+exports.getAllTours = async (req, res) => {
+  try {
+    // const queryObj = { ...req.query };
+    // const excludeQuery = ["page", "sort", "limit", "fields"];
+    // excludeQuery.forEach((el) => {
+    //   delete queryObj[el];
+    // });
+
+    // let queryStr = JSON.stringify(queryObj);
+    // queryStr = queryStr.replace(/\b(gt|gte|lt|lte)\b/g, (match) => `$${match}`);
+
+    // let query = Tour.find(JSON.parse(queryStr));
+
+    // if (req.query.sort) {
+    //   let sortQuery = req.query.sort.split(",").join(" ");
+
+    //   query = query.sort(sortQuery);
+    // } else {
+    //   query = query.sort("-createdAt");
+    // }
+
+    // if (req.query.fields) {
+    //   const fields = req.query.fields.split(",").join(" ");
+    //   query = query.select(fields);
+    // } else {
+    //   query = query.select("-__v");
+    // }
+
+    // const page = req.query.page * 1 || 1;
+    // const lim = req.query.limit * 1 || 100;
+    // const skip = lim * (page - 1);
+
+    // query = query.skip(skip).limit(lim);
+
+    // if (req.query.page) {
+    //   const numTours = await Tour.countDocuments();
+    //   if (skip >= numTours) throw new Error("Page Doesnot Exists");
+    // }
+
+    const features = new APIFeatures(Tour.find(), req.query)
+      .filter()
+      .sort()
+      .limitFields()
+      .paginate();
+    const tours = await features.query;
 
     res.status(200).json({
       status: "Success",
@@ -71,6 +129,7 @@ exports.getAllTours = async (req, res) => {
       },
     });
   } catch (err) {
+    console.log(err);
     res.status(404).json({
       status: "Failed",
       message: err,
@@ -153,6 +212,63 @@ exports.deleteTour = async (req, res) => {
     res.status(204).json({
       status: "Success",
       data: null,
+    });
+  } catch (err) {
+    res.status(404).json({
+      status: "Failed",
+      error: err,
+    });
+  }
+};
+
+exports.getTourStats = async (req, res) => {
+  try {
+    const stats = await Tour.aggregate([
+      {
+        $match: { ratingAvg: { $gte: 4.5 } },
+      },
+      {
+        $group: {
+          _id: "$difficulty",
+          numRatings: { $sum: "$ratingQuantity" },
+          numTours: { $sum: 1 },
+          avgRating: { $avg: "$ratingAvg" },
+          avgPrice: { $avg: "$price" },
+          minPrice: { $min: "$price" },
+          maxPrice: { $max: "$price" },
+        },
+      },
+    ]);
+
+    res.status(200).json({
+      status: "Success",
+      items: stats.length,
+      data: {
+        stats,
+      },
+    });
+  } catch (err) {
+    res.status(404).json({
+      status: "Failed",
+      error: err,
+    });
+  }
+};
+
+exports.getMonthlyPlan = async (req, res) => {
+  try {
+    const year = req.params.year * 1;
+    const plan = await Tour.aggregate([
+      {
+        $unwind: "$startDates",
+      },
+    ]);
+    res.status(200).json({
+      status: "Success",
+      items: plan.length,
+      data: {
+        plan,
+      },
     });
   } catch (err) {
     res.status(404).json({
