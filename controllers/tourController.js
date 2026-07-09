@@ -14,6 +14,14 @@ const Tour = require("./../models/tourModels");
 //   next();
 // };
 
+exports.aliasTopTours = (req, res, next) => {
+  req.query.limit = "5";
+
+  req.query.sort = "-ratingAverage,price";
+  req.query.fields = "name,price,ratingsAverage,summary,difficulty";
+  next();
+};
+
 exports.getAllTours = async (req, res) => {
   try {
     const queryObj = { ...req.query };
@@ -47,6 +55,11 @@ exports.getAllTours = async (req, res) => {
     const skip = lim * (page - 1);
 
     query = query.skip(skip).limit(lim);
+
+    if (req.query.page) {
+      const numTours = await Tour.countDocuments();
+      if (skip >= numTours) throw new Error("Page Doesnot Exists");
+    }
 
     const tours = await query;
 
