@@ -46,6 +46,11 @@ const tourSchema = new mongoose.Schema(
       required: [true, "A tour must have a desc"],
       trim: true,
     },
+
+    secreteTour: {
+      type: Boolean,
+      default: false;
+    },
     imageCover: {
       type: String,
       required: [true, "must sppecify"],
@@ -71,6 +76,14 @@ tourSchema.pre("save", function (next) {
   this.slug = slugify(this.name, { lower: true });
   next();
 });
+
+tourSchema.pre(/^find/, function(next){
+
+  this.find({secreteTour: {$ne: true}})
+
+  next();
+})
+
 
 const Tour = mongoose.model("Tour", tourSchema);
 
