@@ -49,7 +49,7 @@ const tourSchema = new mongoose.Schema(
 
     secreteTour: {
       type: Boolean,
-      default: false;
+      default: false,
     },
     imageCover: {
       type: String,
@@ -77,13 +77,20 @@ tourSchema.pre("save", function (next) {
   next();
 });
 
-tourSchema.pre(/^find/, function(next){
-
-  this.find({secreteTour: {$ne: true}})
+tourSchema.pre(/^find/, function (next) {
+  this.find({ secreteTour: { $ne: true } });
 
   next();
-})
+});
 
+// tourSchema.post(/^find/, function (docs, next) {
+//   next();
+// });
+
+tourSchema.pre("aggregate", function (next) {
+  this.pipeline().unshift({ $match: { secreteTour: { $ne: true } } });
+  next();
+});
 
 const Tour = mongoose.model("Tour", tourSchema);
 
