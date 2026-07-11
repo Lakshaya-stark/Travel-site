@@ -1,20 +1,6 @@
 const Tour = require("./../models/tourModels");
 const APIFeature = require("../utils/apiFeatures");
 
-// const tours = JSON.parse(
-//   fs.readFileSync(`${__dirname}/../dev-data/data/tours-simple.json`),
-// );
-
-// exports.checkBody = (req, res, next) => {
-//   if (!req.body.name || !req.body.price) {
-//     return res.status(400).json({
-//       status: "fail",
-//       message: "Missing name or price",
-//     });
-//   }
-//   next();
-// };
-
 exports.aliasTopTours = (req, res, next) => {
   req.query.limit = "5";
 
@@ -25,43 +11,6 @@ exports.aliasTopTours = (req, res, next) => {
 
 exports.getAllTours = async (req, res) => {
   try {
-    // const queryObj = { ...req.query };
-    // const excludeQuery = ["page", "sort", "limit", "fields"];
-    // excludeQuery.forEach((el) => {
-    //   delete queryObj[el];
-    // });
-
-    // let queryStr = JSON.stringify(queryObj);
-    // queryStr = queryStr.replace(/\b(gt|gte|lt|lte)\b/g, (match) => `$${match}`);
-
-    // let query = Tour.find(JSON.parse(queryStr));
-
-    // if (req.query.sort) {
-    //   let sortQuery = req.query.sort.split(",").join(" ");
-
-    //   query = query.sort(sortQuery);
-    // } else {
-    //   query = query.sort("-createdAt");
-    // }
-
-    // if (req.query.fields) {
-    //   const fields = req.query.fields.split(",").join(" ");
-    //   query = query.select(fields);
-    // } else {
-    //   query = query.select("-__v");
-    // }
-
-    // const page = req.query.page * 1 || 1;
-    // const lim = req.query.limit * 1 || 100;
-    // const skip = lim * (page - 1);
-
-    // query = query.skip(skip).limit(lim);
-
-    // if (req.query.page) {
-    //   const numTours = await Tour.countDocuments();
-    //   if (skip >= numTours) throw new Error("Page Doesnot Exists");
-    // }
-
     const features = new APIFeatures(Tour.find(), req.query)
       .filter()
       .sort()
@@ -103,16 +52,6 @@ exports.getTour = async (req, res) => {
       },
     });
   }
-
-  // const id = req.params.id * 1;
-  // // const tour = tours.find((el) => el.id == id);
-
-  // res.status(200).json({
-  //   status: "Success",
-  //    data: {
-  //      tour,
-  //    },
-  // });
 };
 
 exports.createTour = async (req, res) => {
